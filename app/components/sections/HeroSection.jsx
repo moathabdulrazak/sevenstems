@@ -93,7 +93,7 @@ const HeroSection = () => {
         <div className="max-w-6xl mx-auto w-full space-y-8 md:space-y-12">
           
           {/* Tagline */}
-          <motion.div variants={itemVariants}>
+          {/* <motion.div variants={itemVariants}>
             <motion.span
               className="inline-block text-rose-300 font-sans text-xs md:text-sm tracking-[0.4em] uppercase font-medium"
               initial={{ opacity: 0 }}
@@ -102,7 +102,7 @@ const HeroSection = () => {
             >
               Luxury Floral Design
             </motion.span>
-          </motion.div>
+          </motion.div> */}
 
           {/* Main Title */}
           <motion.div variants={titleVariants}>

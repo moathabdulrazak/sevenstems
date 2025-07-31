@@ -1,0 +1,39 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .stem { stroke: #D4A574; stroke-width: 1; fill: none; }
+      .flower { fill: #f472b4; }
+    </style>
+  </defs>
+  
+  <!-- Seven elegant stems arranged in a compact design -->
+  <g>
+    <!-- Stem 1 -->
+    <path d="M4 28 C4 22, 3 16, 5 8" class="stem"/>
+    <circle cx="5" cy="6" r="1.5" class="flower"/>
+    
+    <!-- Stem 2 -->
+    <path d="M8 28 C8 22, 7 16, 9 10" class="stem"/>
+    <circle cx="9" cy="8" r="1.2" class="flower"/>
+    
+    <!-- Stem 3 -->
+    <path d="M12 28 C12 22, 11 16, 13 5" class="stem"/>
+    <circle cx="13" cy="3" r="1.8" class="flower"/>
+    
+    <!-- Stem 4 - Center -->
+    <path d="M16 28 C16 22, 15 16, 17 4" class="stem" stroke-width="1.5"/>
+    <circle cx="17" cy="2" r="2" class="flower"/>
+    
+    <!-- Stem 5 -->
+    <path d="M20 28 C20 22, 21 16, 19 5" class="stem"/>
+    <circle cx="19" cy="3" r="1.8" class="flower"/>
+    
+    <!-- Stem 6 -->
+    <path d="M24 28 C24 22, 25 16, 23 10" class="stem"/>
+    <circle cx="23" cy="8" r="1.2" class="flower"/>
+    
+    <!-- Stem 7 -->
+    <path d="M28 28 C28 22, 29 16, 27 8" class="stem"/>
+    <circle cx="27" cy="6" r="1.5" class="flower"/>
+  </g>
+</svg>

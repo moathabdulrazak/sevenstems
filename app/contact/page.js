@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { useState } from 'react';
+import Image from 'next/image';
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -33,17 +34,28 @@ export default function Contact() {
   };
 
   return (
-    <div className="pt-20">
+    <div>
       {/* Hero Section */}
-      <section className="py-16 px-6 md:px-12 bg-stone-100">
+      <section className="relative h-screen flex items-center justify-center overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <Image
+            src="https://images.unsplash.com/photo-1487530811176-3780de880c2d?w=1920&h=1080&fit=crop"
+            alt="Beautiful floral studio workspace"
+            fill
+            className="object-cover brightness-50"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/60" />
+        </div>
+        
         <motion.div
-          className="max-w-4xl mx-auto text-center"
-          initial={{ opacity: 0, y: 30 }}
+          className="relative z-10 text-center text-white px-6"
+          initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
+          transition={{ duration: 1, delay: 0.2 }}
         >
-          <h1 className="text-5xl md:text-7xl mb-6">Let's Connect</h1>
-          <p className="text-xl font-sans font-light text-gray-500">
+          <h1 className="text-5xl md:text-7xl mb-6 font-light drop-shadow-lg">Let's Connect</h1>
+          <p className="text-xl font-sans font-light max-w-2xl mx-auto drop-shadow-md">
             Begin your journey to extraordinary floral design
           </p>
         </motion.div>

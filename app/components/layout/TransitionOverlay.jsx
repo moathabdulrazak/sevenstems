@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import Logo from '../ui/Logo';
 
 const TransitionOverlay = () => {
   const pathname = usePathname();
@@ -29,50 +30,13 @@ const TransitionOverlay = () => {
           transition={{ duration: 0.3, ease: "easeInOut" }}
         >
           <motion.div
-            className="flex items-center space-x-1"
+            className="text-gray-600"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
             transition={{ duration: 0.4, delay: 0.1 }}
           >
-            <motion.div
-              className="w-2 h-2 bg-rose-400 rounded-full"
-              animate={{ 
-                scale: [1, 1.2, 1],
-                opacity: [0.7, 1, 0.7]
-              }}
-              transition={{ 
-                duration: 1,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-            />
-            <motion.div
-              className="w-2 h-2 bg-rose-400 rounded-full"
-              animate={{ 
-                scale: [1, 1.2, 1],
-                opacity: [0.7, 1, 0.7]
-              }}
-              transition={{ 
-                duration: 1,
-                repeat: Infinity,
-                ease: "easeInOut",
-                delay: 0.2
-              }}
-            />
-            <motion.div
-              className="w-2 h-2 bg-rose-400 rounded-full"
-              animate={{ 
-                scale: [1, 1.2, 1],
-                opacity: [0.7, 1, 0.7]
-              }}
-              transition={{ 
-                duration: 1,
-                repeat: Infinity,
-                ease: "easeInOut",
-                delay: 0.4
-              }}
-            />
+            <Logo className="h-16" animate={true} />
           </motion.div>
         </motion.div>
       )}

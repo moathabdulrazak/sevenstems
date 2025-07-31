@@ -31,7 +31,7 @@ const Navigation = () => {
       <motion.nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
           scrolled 
-            ? 'bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-100' 
+            ? 'bg-stone-900/95 backdrop-blur-md shadow-lg border-b border-stone-700' 
             : 'bg-transparent'
         }`}
         initial={{ y: -100 }}
@@ -50,7 +50,9 @@ const Navigation = () => {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <Link href="/" className="block">
+              <Link href="/" className={`block transition-colors duration-300 ${
+                scrolled ? 'text-stone-100' : 'text-white'
+              }`}>
                 <Logo className={`w-auto transition-all duration-300 ${
                   scrolled ? 'h-10' : 'h-12'
                 }`} animate={false} />
@@ -73,7 +75,7 @@ const Navigation = () => {
                         relative px-4 py-3 text-sm font-sans font-medium 
                         tracking-[0.15em] uppercase transition-all duration-300
                         ${scrolled 
-                          ? 'text-gray-800 hover:text-rose-500' 
+                          ? 'text-stone-100 hover:text-rose-400' 
                           : 'text-white hover:text-rose-300'
                         }
                         group
@@ -83,7 +85,7 @@ const Navigation = () => {
                       <span className={`
                         absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0.5 
                         transition-all duration-300 group-hover:w-full
-                        ${scrolled ? 'bg-rose-500' : 'bg-rose-300'}
+                        ${scrolled ? 'bg-rose-400' : 'bg-rose-300'}
                       `} />
                     </Link>
                   </motion.div>
@@ -104,7 +106,7 @@ const Navigation = () => {
                   px-6 py-3 text-sm font-sans font-medium tracking-wider uppercase
                   border-2 transition-all duration-300 hover:scale-105
                   ${scrolled
-                    ? 'border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white'
+                    ? 'border-stone-200 text-stone-100 hover:bg-stone-200 hover:text-stone-900'
                     : 'border-white text-white hover:bg-white hover:text-gray-900'
                   }
                 `}
@@ -124,14 +126,14 @@ const Navigation = () => {
               <motion.span
                 className={`
                   block w-6 h-0.5 transition-all duration-300 transform
-                  ${scrolled ? 'bg-gray-900' : 'bg-white'}
+                  ${scrolled ? 'bg-stone-100' : 'bg-white'}
                   ${isOpen ? 'rotate-45 translate-y-1.5' : ''}
                 `}
               />
               <motion.span
                 className={`
                   block w-6 h-0.5 mt-1.5 transition-all duration-300 transform
-                  ${scrolled ? 'bg-gray-900' : 'bg-white'}
+                  ${scrolled ? 'bg-stone-100' : 'bg-white'}
                   ${isOpen ? '-rotate-45 -translate-y-1.5' : ''}
                 `}
               />

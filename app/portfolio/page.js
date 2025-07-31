@@ -1,178 +1,185 @@
 "use client";
 
-import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { storage } from '../lib/firebase';
+import { ref, listAll, getDownloadURL } from 'firebase/storage';
 
 export default function Portfolio() {
-  const [filter, setFilter] = useState('all');
-  const [hoveredId, setHoveredId] = useState(null);
+  const [firebaseImages, setFirebaseImages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [brokenImages, setBrokenImages] = useState(new Set());
 
-  const portfolioItems = [
-    {
-      id: 1,
-      category: 'weddings',
-      title: 'Garden Romance Wedding',
-      description: 'An enchanting outdoor celebration with cascading florals',
-      image: 'https://images.unsplash.com/photo-1519741347686-c1e0aadf4611?w=600&h=900&fit=crop',
-      height: 'tall'
-    },
-    {
-      id: 2,
-      category: 'events',
-      title: 'Corporate Gala',
-      description: 'Sophisticated arrangements for a luxury brand launch',
-      image: 'https://images.unsplash.com/photo-1533460004989-cef01064af7e?w=600&h=600&fit=crop',
-      height: 'normal'
-    },
-    {
-      id: 3,
-      category: 'installs',
-      title: 'Museum Installation',
-      description: 'A dramatic floral sculpture in the contemporary wing',
-      image: 'https://images.unsplash.com/photo-1544550581-1bcabf842b77?w=600&h=800&fit=crop',
-      height: 'tall'
-    },
-    {
-      id: 4,
-      category: 'weddings',
-      title: 'Intimate Elopement',
-      description: 'Romantic blooms for a private ceremony',
-      image: 'https://images.unsplash.com/photo-1522936643032-5f3cde4cad06?w=600&h=600&fit=crop',
-      height: 'normal'
-    },
-    {
-      id: 5,
-      category: 'events',
-      title: 'Fashion Week Show',
-      description: 'Avant-garde florals for runway presentation',
-      image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&h=900&fit=crop',
-      height: 'tall'
-    },
-    {
-      id: 6,
-      category: 'weddings',
-      title: 'Ballroom Elegance',
-      description: 'Classic luxury with a modern twist',
-      image: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=600&h=600&fit=crop',
-      height: 'normal'
-    },
-    {
-      id: 7,
-      category: 'installs',
-      title: 'Hotel Lobby Feature',
-      description: 'A living art piece that greets guests',
-      image: 'https://images.unsplash.com/photo-1487530811176-3780de880c2d?w=600&h=600&fit=crop',
-      height: 'normal'
-    },
-    {
-      id: 8,
-      category: 'events',
-      title: 'Charity Benefit',
-      description: 'Opulent designs for a cause',
-      image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=600&h=800&fit=crop',
-      height: 'tall'
-    },
-  ];
+  // Load images from Firebase Storage
+  useEffect(() => {
+    const loadFirebaseImages = async () => {
+      try {
+        const storageRef = ref(storage, 'wedding pics');
+        const result = await listAll(storageRef);
+        
+        // Filter out video files first and randomize order
+        const imageRefs = result.items
+          .filter(item => !item.name.toLowerCase().includes('.mov'))
+          .sort(() => Math.random() - 0.5); // Randomize array
 
-  const filteredItems = filter === 'all' 
-    ? portfolioItems 
-    : portfolioItems.filter(item => item.category === filter);
+        // Load first few images immediately, then load rest
+        const priorityCount = 6; // Load first 6 images fast
+        const priorityRefs = imageRefs.slice(0, priorityCount);
+        const remainingRefs = imageRefs.slice(priorityCount);
 
-  const categories = [
-    { id: 'all', label: 'All Work' },
-    { id: 'weddings', label: 'Weddings' },
-    { id: 'events', label: 'Events' },
-    { id: 'installs', label: 'Installations' },
-  ];
+        // Load priority images first
+        const priorityPromises = priorityRefs.map(async (imageRef, index) => {
+          try {
+            const url = await getDownloadURL(imageRef);
+            return {
+              id: `firebase-${index}`,
+              image: url,
+              height: index % 3 === 0 ? 'tall' : 'normal'
+            };
+          } catch (error) {
+            return null;
+          }
+        });
+
+        const priorityImages = await Promise.all(priorityPromises);
+        const validPriorityImages = priorityImages.filter(img => img !== null);
+        setFirebaseImages(validPriorityImages);
+        setLoading(false);
+
+        // Load remaining images in background without blocking UI
+        if (remainingRefs.length > 0) {
+          setTimeout(async () => {
+            const remainingPromises = remainingRefs.map(async (imageRef, index) => {
+              try {
+                const url = await getDownloadURL(imageRef);
+                return {
+                  id: `firebase-${priorityCount + index}`,
+                  image: url,
+                  height: (priorityCount + index) % 3 === 0 ? 'tall' : 'normal'
+                };
+              } catch (error) {
+                return null;
+              }
+            });
+
+            const remainingImages = await Promise.all(remainingPromises);
+            const validRemainingImages = remainingImages.filter(img => img !== null);
+            
+            setFirebaseImages(prev => [...prev, ...validRemainingImages]);
+          }, 100);
+        }
+      } catch (error) {
+        console.error('Error loading images from Firebase:', error);
+        setLoading(false);
+      }
+    };
+
+    loadFirebaseImages();
+  }, []);
+
+  // Handle broken images
+  const handleImageError = (imageId) => {
+    setBrokenImages(prev => new Set([...prev, imageId]));
+  };
+
+  // Handle image click to expand
+  const handleImageClick = (image) => {
+    setSelectedImage(image);
+  };
+
+  // Close expanded image
+  const closeModal = () => {
+    setSelectedImage(null);
+  };
+
+  // Handle keyboard events for modal
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape' && selectedImage) {
+        closeModal();
+      }
+    };
+
+    if (selectedImage) {
+      document.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden'; // Prevent background scroll
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'unset';
+    };
+  }, [selectedImage]);
+
 
 
   return (
-    <div className="pt-20">
+    <div>
       {/* Hero Section */}
-      <section className="py-16 px-6 md:px-12 bg-white">
+      <section className="relative h-screen flex items-center justify-center overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <Image
+            src="https://images.unsplash.com/photo-1606800052052-a08af7148866?w=1920&h=1080&fit=crop"
+            alt="Stunning wedding bouquet and floral arrangements"
+            fill
+            className="object-cover brightness-50"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/60" />
+        </div>
+        
         <motion.div
-          className="max-w-7xl mx-auto text-center"
-          initial={{ opacity: 0, y: 30 }}
+          className="relative z-10 text-center text-white px-6"
+          initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
+          transition={{ duration: 1, delay: 0.2 }}
         >
-          <h1 className="text-5xl md:text-7xl mb-6">Portfolio</h1>
-          <p className="text-xl font-sans font-light text-gray-500 max-w-2xl mx-auto">
+          <h1 className="text-5xl md:text-7xl mb-6 font-light drop-shadow-lg">Portfolio</h1>
+          <p className="text-xl font-sans font-light max-w-2xl mx-auto drop-shadow-md">
             A curated collection of our most memorable floral stories, each one crafted with passion and purpose
           </p>
         </motion.div>
       </section>
 
-      {/* Filter Tabs */}
-      <section className="px-6 md:px-12 pb-8 bg-white sticky top-20 z-30">
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            className="flex justify-center space-x-8 border-b border-gray-200"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-          >
-            {categories.map((cat) => (
-              <motion.button
-                key={cat.id}
-                onClick={() => setFilter(cat.id)}
-                className={`pb-4 px-2 font-sans text-sm font-medium uppercase tracking-wider transition-all duration-300 ${
-                  filter === cat.id
-                    ? 'text-rose-400 border-b-2 border-rose-400'
-                    : 'text-gray-600 hover:text-black'
-                }`}
-                whileHover={{ y: -1 }}
-                whileTap={{ y: 0 }}
-              >
-                {cat.label}
-              </motion.button>
-            ))}
-          </motion.div>
-        </div>
-      </section>
 
       {/* Pinterest-style Gallery */}
       <section className="px-6 md:px-12 py-12 bg-stone-100">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-[200px]">
-            {filteredItems.map((item, index) => (
-              <div
-                key={item.id}
-                className={`relative group cursor-pointer overflow-hidden bg-white ${
-                  item.height === 'tall' ? 'md:row-span-2' : ''
-                }`}
-                onMouseEnter={() => setHoveredId(item.id)}
-                onMouseLeave={() => setHoveredId(null)}
-              >
-                <Image
-                  src={item.image}
-                  alt={item.title}
-                  fill
-                  className="object-cover transition-transform duration-700 group-hover:scale-110"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                />
-                
-                {/* Overlay */}
+          {loading && firebaseImages.length === 0 ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-400"></div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-[200px]">
+              {firebaseImages
+                .filter(item => !brokenImages.has(item.id))
+                .map((item, index) => (
                 <div
-                  className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent transition-opacity duration-300 ${
-                    hoveredId === item.id ? 'opacity-100' : 'opacity-0'
+                  key={item.id}
+                  className={`relative cursor-pointer overflow-hidden bg-white hover:shadow-xl transition-all duration-300 ${
+                    item.height === 'tall' ? 'md:row-span-2' : ''
                   }`}
-                />
-                
-                {/* Content */}
-                <div
-                  className={`absolute bottom-0 left-0 right-0 p-6 text-white transition-all duration-300 ${
-                    hoveredId === item.id ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'
-                  }`}
+                  onClick={() => handleImageClick(item)}
                 >
-                  <h3 className="text-2xl mb-2">{item.title}</h3>
-                  <p className="font-sans font-light text-sm">{item.description}</p>
+                  <Image
+                    src={item.image}
+                    alt="Portfolio image"
+                    fill
+                    className="object-cover hover:scale-105 transition-transform duration-500"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    onError={() => handleImageError(item.id)}
+                    unoptimized={true}
+                    loading="lazy"
+                  />
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -200,6 +207,49 @@ export default function Portfolio() {
           </Link>
         </motion.div>
       </section>
+
+      {/* Image Modal/Lightbox */}
+      <AnimatePresence>
+        {selectedImage && (
+          <motion.div
+          className="fixed inset-0 bg-black/90 z-[9999] flex items-center justify-center p-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={closeModal}
+        >
+          <motion.div
+            className="relative max-w-7xl max-h-[90vh] w-full h-full"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.8, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button
+              onClick={closeModal}
+              className="absolute top-4 right-4 z-10 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+            >
+              ✕
+            </button>
+
+            {/* Expanded Image */}
+            <div className="relative w-full h-full">
+              <Image
+                src={selectedImage.image}
+                alt={selectedImage.title}
+                fill
+                className="object-contain"
+                sizes="100vw"
+                unoptimized={true}
+              />
+            </div>
+
+          </motion.div>
+        </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

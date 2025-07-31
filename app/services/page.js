@@ -50,30 +50,29 @@ export default function Services() {
 
 
   return (
-    <div className="pt-20">
+    <div>
       {/* Hero Section */}
-      <section className="relative h-[50vh] flex items-center justify-center overflow-hidden">
+      <section className="relative h-screen flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
           <Image
-            src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1920&h=800&fit=crop"
-            alt="Luxury floral arrangement"
+            src="https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=1920&h=1080&fit=crop"
+            alt="Luxury floral services"
             fill
-            className="object-cover"
+            className="object-cover brightness-50"
             priority
             sizes="100vw"
-            unoptimized
           />
-          <div className="absolute inset-0 bg-black/50" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/60" />
         </div>
         
         <motion.div
           className="relative z-10 text-center text-white px-6"
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1 }}
+          transition={{ duration: 1, delay: 0.2 }}
         >
-          <h1 className="text-5xl md:text-7xl mb-4">Our Services</h1>
-          <p className="text-xl font-sans font-light max-w-2xl mx-auto">
+          <h1 className="text-5xl md:text-7xl mb-6 font-light drop-shadow-lg">Our Services</h1>
+          <p className="text-xl font-sans font-light max-w-2xl mx-auto drop-shadow-md">
             Luxury floral design with an avant-garde lens
           </p>
         </motion.div>
