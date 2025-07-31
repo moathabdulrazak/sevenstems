@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
+import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { storage } from '../lib/firebase';
@@ -15,7 +16,7 @@ export default function Portfolio() {
   const [brokenImages, setBrokenImages] = useState(new Set());
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const imagesPerLoad = 24;
+  const imagesPerLoad = 12;
 
   // Load images from Firebase Storage
   useEffect(() => {
@@ -59,30 +60,41 @@ export default function Portfolio() {
     loadFirebaseImages();
   }, []);
 
-  // Load more images
-  const loadMoreImages = () => {
+  // Load more images with throttling
+  const loadMoreImages = React.useCallback(() => {
     if (loadingMore || !hasMore) return;
     
     setLoadingMore(true);
     const currentCount = displayedImages.length;
     const nextBatch = allImages.slice(currentCount, currentCount + imagesPerLoad);
     
-    setDisplayedImages(prev => [...prev, ...nextBatch]);
-    setHasMore(currentCount + nextBatch.length < allImages.length);
-    setLoadingMore(false);
-  };
+    // Use requestAnimationFrame for smooth updates
+    requestAnimationFrame(() => {
+      setDisplayedImages(prev => [...prev, ...nextBatch]);
+      setHasMore(currentCount + nextBatch.length < allImages.length);
+      setLoadingMore(false);
+    });
+  }, [displayedImages.length, allImages, loadingMore, hasMore, imagesPerLoad]);
 
-  // Infinite scroll detection - Pinterest style
+  // Infinite scroll detection with throttling
   useEffect(() => {
+    let ticking = false;
+    
     const handleScroll = () => {
-      if (window.innerHeight + document.documentElement.scrollTop >= document.documentElement.offsetHeight - 800) {
-        loadMoreImages();
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          if (window.innerHeight + document.documentElement.scrollTop >= document.documentElement.offsetHeight - 600) {
+            loadMoreImages();
+          }
+          ticking = false;
+        });
+        ticking = true;
       }
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [displayedImages, loadingMore, hasMore]);
+  }, [loadMoreImages]);
 
   // Handle broken images
   const handleImageError = (imageId) => {
@@ -178,7 +190,8 @@ export default function Portfolio() {
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       onError={() => handleImageError(item.id)}
                       unoptimized={true}
-                      loading={index < 12 ? "eager" : "lazy"}
+                      loading={index < 6 ? "eager" : "lazy"}
+                      priority={index < 4}
                       placeholder="blur"
                       blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyLIWTIYHc73GvQdgeQu3C8dkE4StJKCvn5+fg9wJoKEyefRVe3JlCTD3teCd0cGdmOLLNWtJKCvn5+fg9yLJWTIYHc73Egoe9D3oE3jnFGIGWdAmyJKCvn5+fg9yqnyJKCvn5+fg9qNEFOlDTB6T7lPIjK5KCsT5+fg9+KlgdH0AthI5xeUG3vQdgeRVHjCJKCvn5+fg9knyJKCvn5+fg9aaSJKCvn5+fg9iQ=="
                     />
