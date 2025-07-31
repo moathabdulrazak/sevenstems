@@ -8,10 +8,14 @@ import { storage } from '../lib/firebase';
 import { ref, listAll, getDownloadURL } from 'firebase/storage';
 
 export default function Portfolio() {
-  const [firebaseImages, setFirebaseImages] = useState([]);
+  const [allImages, setAllImages] = useState([]);
+  const [displayedImages, setDisplayedImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
   const [brokenImages, setBrokenImages] = useState(new Set());
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const imagesPerLoad = 24;
 
   // Load images from Firebase Storage
   useEffect(() => {
@@ -20,22 +24,17 @@ export default function Portfolio() {
         const storageRef = ref(storage, 'wedding pics');
         const result = await listAll(storageRef);
         
-        // Filter out video files first and randomize order
+        // Filter out video files and randomize
         const imageRefs = result.items
           .filter(item => !item.name.toLowerCase().includes('.mov'))
-          .sort(() => Math.random() - 0.5); // Randomize array
+          .sort(() => Math.random() - 0.5);
 
-        // Load first few images immediately, then load rest
-        const priorityCount = 6; // Load first 6 images fast
-        const priorityRefs = imageRefs.slice(0, priorityCount);
-        const remainingRefs = imageRefs.slice(priorityCount);
-
-        // Load priority images first
-        const priorityPromises = priorityRefs.map(async (imageRef, index) => {
+        // Load all images
+        const imagePromises = imageRefs.map(async (imageRef, index) => {
           try {
             const url = await getDownloadURL(imageRef);
             return {
-              id: `firebase-${index}`,
+              id: imageRef.fullPath,
               image: url,
               height: index % 3 === 0 ? 'tall' : 'normal'
             };
@@ -44,33 +43,13 @@ export default function Portfolio() {
           }
         });
 
-        const priorityImages = await Promise.all(priorityPromises);
-        const validPriorityImages = priorityImages.filter(img => img !== null);
-        setFirebaseImages(validPriorityImages);
+        const images = await Promise.all(imagePromises);
+        const validImages = images.filter(img => img !== null);
+        
+        setAllImages(validImages);
+        setDisplayedImages(validImages.slice(0, imagesPerLoad));
+        setHasMore(validImages.length > imagesPerLoad);
         setLoading(false);
-
-        // Load remaining images in background without blocking UI
-        if (remainingRefs.length > 0) {
-          setTimeout(async () => {
-            const remainingPromises = remainingRefs.map(async (imageRef, index) => {
-              try {
-                const url = await getDownloadURL(imageRef);
-                return {
-                  id: `firebase-${priorityCount + index}`,
-                  image: url,
-                  height: (priorityCount + index) % 3 === 0 ? 'tall' : 'normal'
-                };
-              } catch (error) {
-                return null;
-              }
-            });
-
-            const remainingImages = await Promise.all(remainingPromises);
-            const validRemainingImages = remainingImages.filter(img => img !== null);
-            
-            setFirebaseImages(prev => [...prev, ...validRemainingImages]);
-          }, 100);
-        }
       } catch (error) {
         console.error('Error loading images from Firebase:', error);
         setLoading(false);
@@ -79,6 +58,31 @@ export default function Portfolio() {
 
     loadFirebaseImages();
   }, []);
+
+  // Load more images
+  const loadMoreImages = () => {
+    if (loadingMore || !hasMore) return;
+    
+    setLoadingMore(true);
+    const currentCount = displayedImages.length;
+    const nextBatch = allImages.slice(currentCount, currentCount + imagesPerLoad);
+    
+    setDisplayedImages(prev => [...prev, ...nextBatch]);
+    setHasMore(currentCount + nextBatch.length < allImages.length);
+    setLoadingMore(false);
+  };
+
+  // Infinite scroll detection - Pinterest style
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.innerHeight + document.documentElement.scrollTop >= document.documentElement.offsetHeight - 800) {
+        loadMoreImages();
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [displayedImages, loadingMore, hasMore]);
 
   // Handle broken images
   const handleImageError = (imageId) => {
@@ -146,39 +150,60 @@ export default function Portfolio() {
         </motion.div>
       </section>
 
-
       {/* Pinterest-style Gallery */}
       <section className="px-6 md:px-12 py-12 bg-stone-100">
         <div className="max-w-7xl mx-auto">
-          {loading && firebaseImages.length === 0 ? (
+          {loading && displayedImages.length === 0 ? (
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-400"></div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-[200px]">
-              {firebaseImages
-                .filter(item => !brokenImages.has(item.id))
-                .map((item, index) => (
-                <div
-                  key={item.id}
-                  className={`relative cursor-pointer overflow-hidden bg-white hover:shadow-xl transition-all duration-300 ${
-                    item.height === 'tall' ? 'md:row-span-2' : ''
-                  }`}
-                  onClick={() => handleImageClick(item)}
-                >
-                  <Image
-                    src={item.image}
-                    alt="Portfolio image"
-                    fill
-                    className="object-cover hover:scale-105 transition-transform duration-500"
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    onError={() => handleImageError(item.id)}
-                    unoptimized={true}
-                    loading="lazy"
-                  />
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-[200px]">
+                {displayedImages
+                  .filter(item => !brokenImages.has(item.id))
+                  .map((item, index) => (
+                  <div
+                    key={item.id}
+                    className={`relative cursor-pointer overflow-hidden bg-white hover:shadow-xl transition-all duration-300 ${
+                      item.height === 'tall' ? 'md:row-span-2' : ''
+                    }`}
+                    onClick={() => handleImageClick(item)}
+                  >
+                    <Image
+                      src={item.image}
+                      alt="Portfolio image"
+                      fill
+                      className="object-cover hover:scale-105 transition-transform duration-500"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      onError={() => handleImageError(item.id)}
+                      unoptimized={true}
+                      loading={index < 12 ? "eager" : "lazy"}
+                      placeholder="blur"
+                      blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyLIWTIYHc73GvQdgeQu3C8dkE4StJKCvn5+fg9wJoKEyefRVe3JlCTD3teCd0cGdmOLLNWtJKCvn5+fg9yLJWTIYHc73Egoe9D3oE3jnFGIGWdAmyJKCvn5+fg9yqnyJKCvn5+fg9qNEFOlDTB6T7lPIjK5KCsT5+fg9+KlgdH0AthI5xeUG3vQdgeRVHjCJKCvn5+fg9knyJKCvn5+fg9aaSJKCvn5+fg9iQ=="
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Loading More Indicator */}
+              {loadingMore && (
+                <div className="flex justify-center items-center mt-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-rose-400"></div>
+                  <span className="ml-3 text-gray-600">Loading more images...</span>
                 </div>
-              ))}
-            </div>
+              )}
+
+              {!hasMore && allImages.length > 0 && (
+                <div className="text-center mt-12 text-gray-600">
+                  You've seen all {allImages.length} images
+                </div>
+              )}
+
+              <div className="text-center mt-6 text-gray-600">
+                Showing {displayedImages.length} of {allImages.length} images
+              </div>
+            </>
           )}
         </div>
       </section>

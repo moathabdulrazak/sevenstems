@@ -2,30 +2,62 @@
 
 import { motion } from 'framer-motion';
 import { useInView } from 'framer-motion';
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import Image from 'next/image';
+import { storage } from '../../lib/firebase';
+import { ref, listAll, getDownloadURL } from 'firebase/storage';
 
 const FeaturedSection = () => {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
+  const [featuredImages, setFeaturedImages] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const featured = [
-    {
-      title: "Weddings",
-      description: "Bespoke floral stories that capture your unique love",
-      image: "https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=800&h=1200&fit=crop",
-    },
-    {
-      title: "Events",
-      description: "Transformative installations that leave lasting impressions",
-      image: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800&h=1200&fit=crop",
-    },
-    {
-      title: "Installations",
-      description: "Architectural florals that redefine spaces",
-      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=1200&fit=crop",
-    },
-  ];
+  // Load featured images from Firebase
+  useEffect(() => {
+    const loadFeaturedImages = async () => {
+      try {
+        const storageRef = ref(storage, 'wedding pics');
+        const result = await listAll(storageRef);
+        
+        // Filter and randomize images
+        const imageRefs = result.items
+          .filter(item => !item.name.toLowerCase().includes('.mov'))
+          .sort(() => Math.random() - 0.5)
+          .slice(0, 3); // Get first 3 randomized images
+
+        const imagePromises = imageRefs.map(async (imageRef, index) => {
+          try {
+            const url = await getDownloadURL(imageRef);
+            const titles = ["Weddings", "Events", "Installations"];
+            const descriptions = [
+              "Bespoke floral stories that capture your unique love",
+              "Transformative installations that leave lasting impressions", 
+              "Architectural florals that redefine spaces"
+            ];
+            
+            return {
+              title: titles[index] || "Featured Work",
+              description: descriptions[index] || "Beautiful floral arrangements from our portfolio",
+              image: url,
+            };
+          } catch (error) {
+            return null;
+          }
+        });
+
+        const images = await Promise.all(imagePromises);
+        const validImages = images.filter(img => img !== null);
+        setFeaturedImages(validImages);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error loading featured images:', error);
+        setLoading(false);
+      }
+    };
+
+    loadFeaturedImages();
+  }, []);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -64,13 +96,18 @@ const FeaturedSection = () => {
           </p>
         </motion.div>
 
-        <motion.div
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 lg:gap-10"
-          variants={containerVariants}
-          initial="hidden"
-          animate={isInView ? "visible" : "hidden"}
-        >
-          {featured.map((item, index) => (
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-400"></div>
+          </div>
+        ) : (
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 lg:gap-10"
+            variants={containerVariants}
+            initial="hidden"
+            animate={isInView ? "visible" : "hidden"}
+          >
+            {featuredImages.map((item, index) => (
             <motion.div
               key={index}
               className="group cursor-pointer space-y-6"
@@ -84,6 +121,8 @@ const FeaturedSection = () => {
                   alt={item.title}
                   fill
                   className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                  unoptimized={true}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               </div>
@@ -97,7 +136,8 @@ const FeaturedSection = () => {
               </div>
             </motion.div>
           ))}
-        </motion.div>
+          </motion.div>
+        )}
 
         <motion.div
           className="text-center mt-16 md:mt-20"
